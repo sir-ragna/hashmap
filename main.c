@@ -55,7 +55,7 @@ AddElementToHashmap(Hashmap* hashmap, char* key, int value) {
         newElement->next = NULL;
         hashmap->list[hash] = newElement;
         hashmap->len++;
-        printf("added element in posistion %d\n", hash);
+        printf("New element for empty position %d (%s:%d)\n", hash, key, value);
         return;
     }
 
@@ -79,7 +79,7 @@ AddElementToHashmap(Hashmap* hashmap, char* key, int value) {
         newElement->key = key;
         newElement->value = value;
         element->next = newElement;
-        printf("Created new element %p, %s=%d\n", newElement, key, value);
+        printf("New element for existing position %d (%s:%d)\n", hash, key, value);
         return;
     }
     
@@ -99,24 +99,86 @@ PrintHashmap(Hashmap *hp) {
             printf("%p %d ==> '%s': %d (%p)\n", hp, i, element->key, element->value, element);
             while (element->next != NULL) {
                 element = element->next;
-                printf("                  -> '%s': %d (%p) \n", element->key, element->value, element);
+                printf("                    \\_>"
+                       " '%s': %d (%p) \n", element->key, element->value, element);
             }
         }
     }
 }
 
+/* returns pointer to value or NULL */
+int *
+GetValueHashmap(Hashmap *hp, char *key)
+{
+    unsigned int hash = CalculateHash(key);
+    Element *e = hp->list[hash];
+    if (e == NULL) {
+        return NULL;
+    }
+    while (e->next != NULL && strcmp(e->key, key) != 0) {
+        e = e->next;
+    }
+    /* e is now a match, or the last element and there is no match */
+    if (strcmp(e->key, key) == 0) {
+        return &(e->value);
+    }
+    return NULL;
+}
+
+
 int
 main()
 {
-    char* a[] = {"abc", "xyz", "foo", "bar", "foobar", "oompa", "loompa", "a", "aa", "ab", "ba", "bb", "b"};
+    char* a[] = {"abc", "xyz", "foo", "bar", "foobar", "oompa", "loompa", 
+                 "a", "aa", "ab", "ba", "bb", "b", "1", "2", "3", "4",
+                 "A", "AA", "AB", "BA", "BB", "B", "1", "2", "3", "4"};
     Hashmap *hp = NewHashmap();
-    for (size_t i = 0; i < 13; i++)
+    for (size_t i = 0; i < 27; i++)
     {
-        //printf("%s hash: %d\n", a[i], CalculateHash(a[i]));
+        printf("%s hash: %d\n", a[i], CalculateHash(a[i]));
         AddElementToHashmap(hp, a[i], strlen(a[i]));
     }
-
     
     PrintHashmap(hp);
+
+    int *val = GetValueHashmap(hp, "abc");
+    if (val != NULL) {
+        printf("The value for 'abc' is %d\n", *val);
+    } else {
+        printf("No value found for 'abc'");
+    }
+
+    AddElementToHashmap(hp, "abc", 1234);
+
+    val = GetValueHashmap(hp, "abc");
+    if (val != NULL) {
+        printf("The value for 'abc' is %d\n", *val);
+    } else {
+        printf("No value found for 'abc'");
+    }
+
+    val = GetValueHashmap(hp, "4");
+    if (val != NULL) {
+        printf("The value for '4' is %d\n", *val);
+    } else {
+        printf("No value found for '4'");
+    }
+
+    val = GetValueHashmap(hp, "b");
+    if (val != NULL) {
+        printf("The value for 'b' is %d\n", *val);
+    } else {
+        printf("No value found for 'b'");
+    }
+
+    val = GetValueHashmap(hp, "oompa");
+    if (val != NULL) {
+        printf("The value for 'oompa' is %d\n", *val);
+    } else {
+        printf("No value found for 'oompa'");
+    }
+
+
+
     return 0;
 }
