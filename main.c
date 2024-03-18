@@ -30,7 +30,7 @@ CalculateHash(char* key) {
     unsigned int result = 0;
     for (; *key != '\0'; key++)
     {
-        char c = key[0] - 65;
+        char c = key[0];
         result += c * c;
     }
     return result % CAPACITY;
