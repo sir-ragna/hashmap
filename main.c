@@ -20,7 +20,6 @@ typedef struct hashmap {
 Hashmap*
 NewHashmap() {
     Hashmap* hp = malloc(sizeof(Hashmap));
-    hp->len = 0;
     hp->cap = CAPACITY;
     hp->list = calloc(sizeof(Element), CAPACITY);
     return hp;
@@ -38,23 +37,25 @@ CalculateHash(char* key) {
 }
 
 void
-AddElementToHashmap(Hashmap* hashmap, char* key, int value) {
-    if (hashmap->len == hashmap->cap) {
-        printf("Hashmap is full\n");
-        return;
+AddElementToHashmap(Hashmap* hashmap, char* key, int value) 
+{
+    if (hashmap == NULL) {
+        printf("PANIC provided hashmap is NULL\n");
+        exit(125);
+    }
+    if (key == NULL) {
+        printf("PANIC provided keys is NULL\n");
+        exit(124);
     }
 
     unsigned int hash = CalculateHash(key);
     if (hashmap->list[hash] == NULL) {
         /* add element in position the empty position */
         Element *newElement = malloc(sizeof(Element));
-        newElement->key = malloc(strlen(key) + 1);
-        strcpy(newElement->key, key);
-        newElement->key[strlen(key)] = '\0';
+        newElement->key = strdup(key);
         newElement->value = value;
         newElement->next = NULL;
         hashmap->list[hash] = newElement;
-        hashmap->len++;
         printf("New element for empty position %d (%s:%d)\n", hash, key, value);
         return;
     }
@@ -76,7 +77,7 @@ AddElementToHashmap(Hashmap* hashmap, char* key, int value) {
          * add another element to the linked list */
         Element *newElement = (Element *)malloc(sizeof(Element));
         newElement->next = NULL;
-        newElement->key = key;
+        newElement->key = strdup(key);
         newElement->value = value;
         element->next = newElement;
         printf("New element for existing position %d (%s:%d)\n", hash, key, value);
@@ -90,6 +91,10 @@ AddElementToHashmap(Hashmap* hashmap, char* key, int value) {
 
 void
 PrintHashmap(Hashmap *hp) {
+    if (hp == NULL || hp->list == NULL) {
+        printf("PANIC hashmap or hashmap->list is NULL\n");
+        exit(126);
+    }
     for (int i = 0; i < CAPACITY; i++)
     {
         Element *element = hp->list[i];
@@ -110,6 +115,15 @@ PrintHashmap(Hashmap *hp) {
 int *
 GetValueHashmap(Hashmap *hp, char *key)
 {
+    if (hp == NULL) {
+        printf("PANIC provided hashmap is NULL\n");
+        exit(125);
+    }
+    if (key == NULL) {
+        printf("PANIC provided keys is NULL\n");
+        exit(124);
+    }
+
     unsigned int hash = CalculateHash(key);
     Element *e = hp->list[hash];
     if (e == NULL) {
@@ -125,6 +139,56 @@ GetValueHashmap(Hashmap *hp, char *key)
     return NULL;
 }
 
+void
+DeleteElementHashmap(Hashmap *hp, char *key)
+{
+    unsigned int hash = CalculateHash(key);
+    Element *e = hp->list[hash];
+    if (e == NULL) {
+        return;
+    }
+    Element *previous = NULL;
+    while (e->next != NULL && strcmp(e->key, key) != 0) {
+        previous = e;
+        e = e->next;
+    }
+    /* e is now a match, or the last element and there is no match */
+    if (strcmp(e->key, key) == 0) {
+        /* e is a match */
+        if (previous == NULL) {
+            /* Our match is the first element */
+            hp->list[hash] = hp->list[hash]->next; // link to the next element
+        } else {
+            previous->next = e->next;
+        }
+        free(e->key);
+        free(e);
+        return;
+    }
+}
+
+void
+CleanupHashmap(Hashmap *hp)
+{
+    Element *e = NULL;
+    for (size_t i = 0; i < hp->cap; i++)
+    {
+        if (hp->list[i] != NULL) {
+            while (hp->list[i]->next != NULL) {
+                e = hp->list[i];
+                hp->list[i] = hp->list[i]->next;
+                free(e->key);
+                free(e);
+            }
+            free(hp->list[i]->key);
+            free(hp->list[i]);
+            hp->list[i] = NULL;
+        }
+    }
+    free(hp->list);
+    hp->list = NULL;
+    free(hp);
+}
 
 int
 main()
@@ -145,7 +209,7 @@ main()
     if (val != NULL) {
         printf("The value for 'abc' is %d\n", *val);
     } else {
-        printf("No value found for 'abc'");
+        printf("No value found for 'abc'\n");
     }
 
     AddElementToHashmap(hp, "abc", 1234);
@@ -154,31 +218,43 @@ main()
     if (val != NULL) {
         printf("The value for 'abc' is %d\n", *val);
     } else {
-        printf("No value found for 'abc'");
+        printf("No value found for 'abc'\n");
     }
 
     val = GetValueHashmap(hp, "4");
     if (val != NULL) {
         printf("The value for '4' is %d\n", *val);
     } else {
-        printf("No value found for '4'");
+        printf("No value found for '4'\n");
     }
 
     val = GetValueHashmap(hp, "b");
     if (val != NULL) {
         printf("The value for 'b' is %d\n", *val);
     } else {
-        printf("No value found for 'b'");
+        printf("No value found for 'b'\n");
     }
 
     val = GetValueHashmap(hp, "oompa");
     if (val != NULL) {
         printf("The value for 'oompa' is %d\n", *val);
     } else {
-        printf("No value found for 'oompa'");
+        printf("No value found for 'oompa'\n");
     }
 
+    DeleteElementHashmap(hp, "oompa");
 
+    val = GetValueHashmap(hp, "oompa");
+    if (val != NULL) {
+        printf("The value for 'oompa' is %d\n", *val);
+    } else {
+        printf("No value found for 'oompa'\n");
+    }
 
+    PrintHashmap(hp);
+
+    CleanupHashmap(hp);
+    hp = NULL;
+    // PrintHashmap(hp);
     return 0;
 }
